@@ -1,14 +1,21 @@
+from dotenv import load_dotenv
 import os
 from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 import pandas as pd
+import os
+
+load_dotenv()
+
 
 # Crear la instancia de Flask
 app = Flask(__name__, static_folder='static', template_folder='templates')
-CORS(app, origins=["https://frontend-taupe-tau.vercel.app"])
+frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:8080')
 
-# Ruta a la carpeta compartida en red
-DATA_DIR = r'//192.168.0.251/artemis/Control de Calidad/2. Control de Personal/PERSONAL 2024'
+CORS(app, resources={r"/*": {"origins": os.getenv('FRONTEND_URL', '*')}})
+
+# Configurar la ruta para el archivo de datos
+DATA_DIR = os.getenv('DATA_DIR', 'C:/Users/Calidad/Desktop/Proyectos/control_personal/backend')  # Ruta predeterminada si no está en la variable de entorno
 DATA_FILE = os.path.join(DATA_DIR, 'data.xlsx')
 
 if not os.path.exists(DATA_DIR):
@@ -58,5 +65,5 @@ def submit_form():
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
-    # Configuración para producción
-    app.run(host='0.0.0.0', port=5000, debug=False)
+ # Configuración para producción y desarrollo
+    app.run(host='0.0.0.0', port=int(os.getenv('PORT', 5000)), debug=os.getenv('DEBUG', 'False') == 'True')
