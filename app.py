@@ -5,12 +5,10 @@ import pandas as pd
 
 # Crear la instancia de Flask
 app = Flask(__name__, static_folder='static', template_folder='templates')
+CORS(app, origins=["https://frontend-taupe-tau.vercel.app"])
 
-# Permitir todos los orígenes para pruebas
-CORS(app, resources={r"/*": {"origins": "*"}})
-
-# Configurar la ruta para el archivo de datos
-DATA_DIR = 'C:/Users/Calidad/Desktop/Proyectos/control_personal/backend'  # Cambiar a la ruta adecuada para el entorno de producción
+# Ruta a la carpeta compartida en red
+DATA_DIR = r'\\192.168.0.251\artemis\Control de Calidad\2. Control de Personal\PERSONAL 2024'
 DATA_FILE = os.path.join(DATA_DIR, 'data.xlsx')
 
 if not os.path.exists(DATA_DIR):
