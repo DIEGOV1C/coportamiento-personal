@@ -8,7 +8,7 @@ app = Flask(__name__, static_folder='static', template_folder='templates')
 CORS(app, origins=["https://frontend-taupe-tau.vercel.app"])
 
 # Ruta a la carpeta compartida en red
-DATA_DIR = r'\\192.168.0.251\artemis\Control de Calidad\2. Control de Personal\PERSONAL 2024'
+DATA_DIR = r'//192.168.0.251/artemis/Control de Calidad/2. Control de Personal/PERSONAL 2024'
 DATA_FILE = os.path.join(DATA_DIR, 'data.xlsx')
 
 if not os.path.exists(DATA_DIR):
