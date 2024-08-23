@@ -5,7 +5,9 @@ import pandas as pd
 
 # Crear la instancia de Flask
 app = Flask(__name__, static_folder='static', template_folder='templates')
-CORS(app, origins=["https://frontend-dcbb3mmyv-diego-vicunas-projects.vercel.app"])
+
+# Permitir todos los orígenes para pruebas
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 # Configurar la ruta para el archivo de datos
 DATA_DIR = 'C:/Users/Calidad/Desktop/Proyectos/control_personal/backend'  # Cambiar a la ruta adecuada para el entorno de producción
