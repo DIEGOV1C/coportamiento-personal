@@ -3,19 +3,24 @@ import os
 from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 import pandas as pd
-import os
+from supabase import create_client, Client
 
+# Cargar las variables de entorno
 load_dotenv()
-
 
 # Crear la instancia de Flask
 app = Flask(__name__, static_folder='static', template_folder='templates')
 frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:8080')
 
-CORS(app, resources={r"/*": {"origins": os.getenv('FRONTEND_URL', '*')}})
+CORS(app, resources={r"/*": {"origins": frontend_url}})
+
+# Configuración para la base de datos
+SUPABASE_URL = os.getenv('SUPABASE_URL')
+SUPABASE_KEY = os.getenv('SUPABASE_KEY')
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # Configurar la ruta para el archivo de datos
-DATA_DIR = os.getenv('DATA_DIR', 'C:/Users/Calidad/Desktop/Proyectos/control_personal/backend')  # Ruta predeterminada si no está en la variable de entorno
+DATA_DIR = os.getenv('DATA_DIR', 'C:/Users/Calidad/Desktop/Proyectos/control_personal/backend')
 DATA_FILE = os.path.join(DATA_DIR, 'data.xlsx')
 
 if not os.path.exists(DATA_DIR):
@@ -30,6 +35,7 @@ def submit_form():
     try:
         data = request.json
 
+        # Guardar los datos en el archivo Excel
         df = pd.DataFrame([{
             'Fecha': data['fecha'],
             'Turno': data['turno'],
@@ -64,6 +70,17 @@ def submit_form():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route('/get-personnel', methods=['GET'])
+def get_personnel():
+    try:
+        # Consultar la base de datos
+        response = supabase.table('personnel').select('*').execute()
+        data = response.data
+
+        return jsonify({"personnel": data}), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 if __name__ == '__main__':
- # Configuración para producción y desarrollo
     app.run(host='0.0.0.0', port=int(os.getenv('PORT', 5000)), debug=os.getenv('DEBUG', 'False') == 'True')
