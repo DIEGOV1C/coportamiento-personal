@@ -82,5 +82,17 @@ def get_personnel():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route('/get-areas', methods=['GET'])
+def get_areas():
+    try:
+        # Consultar la base de datos
+        response = supabase.table('area').select('*').execute()
+        data = response.data
+
+        return jsonify({"areas": data}), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.getenv('PORT', 5000)), debug=os.getenv('DEBUG', 'False') == 'True')
