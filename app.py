@@ -3,6 +3,9 @@ import os
 from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 import pandas as pd
+import dropbox
+from dropbox.files import WriteMode
+from dropbox.exceptions import ApiError
 from supabase import create_client, Client
 
 # Cargar las variables de entorno
@@ -14,17 +17,15 @@ frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:8080')
 
 CORS(app, resources={r"/*": {"origins": frontend_url}})
 
+# Configuración para Dropbox
+DROPBOX_TOKEN = os.getenv('DROPBOX_TOKEN')
+DROPBOX_PATH = '/data.xlsx'
+dropbox_client = dropbox.Dropbox(DROPBOX_TOKEN)
+
 # Configuración para la base de datos
 SUPABASE_URL = os.getenv('SUPABASE_URL')
 SUPABASE_KEY = os.getenv('SUPABASE_KEY')
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
-
-# Configurar la ruta para el archivo de datos
-DATA_DIR = os.getenv('DATA_DIR', 'C:/Users/Calidad/Desktop/Proyectos/control_personal/backend')
-DATA_FILE = os.path.join(DATA_DIR, 'data.xlsx')
-
-if not os.path.exists(DATA_DIR):
-    os.makedirs(DATA_DIR)
 
 @app.route('/')
 def index():
@@ -35,8 +36,18 @@ def submit_form():
     try:
         data = request.json
 
-        # Guardar los datos en el archivo Excel
-        df = pd.DataFrame([{
+        # Descargar el archivo desde Dropbox
+        try:
+            metadata, file_content = dropbox_client.files_download(DROPBOX_PATH)
+            existing_df = pd.read_excel(file_content.content)
+        except dropbox.exceptions.ApiError as e:
+            if e.error.is_path() and e.error.get_path().is_conflict():
+                return jsonify({"error": "Conflicto al descargar el archivo"}), 500
+            # Crear un DataFrame vacío si el archivo no existe
+            existing_df = pd.DataFrame()
+
+        # Agregar el nuevo registro
+        new_record = pd.DataFrame([{
             'Fecha': data['fecha'],
             'Turno': data['turno'],
             'Área': data['area'],
@@ -56,14 +67,18 @@ def submit_form():
             'Supervisor': data['supervisor'],
             'Observaciones': data['observaciones']
         }])
+        df = pd.concat([existing_df, new_record], ignore_index=True)
 
-        try:
-            existing_df = pd.read_excel(DATA_FILE)
-            df = pd.concat([existing_df, df], ignore_index=True)
-        except FileNotFoundError:
-            pass
+        # Guardar el DataFrame actualizado en un archivo Excel temporal
+        temp_file = 'temp_data.xlsx'
+        df.to_excel(temp_file, index=False)
 
-        df.to_excel(DATA_FILE, index=False)
+        # Subir el archivo actualizado a Dropbox
+        with open(temp_file, 'rb') as f:
+            dropbox_client.files_upload(f.read(), DROPBOX_PATH, mode=WriteMode('overwrite'))
+
+        # Eliminar el archivo temporal
+        os.remove(temp_file)
 
         return jsonify({"message": "Datos guardados con éxito"}), 200
 
