@@ -15,7 +15,7 @@ load_dotenv()
 app = Flask(__name__, static_folder='static', template_folder='templates')
 frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:8080')
 
-CORS(app, resources={r"/*": {"origins": frontend_url}})
+CORS(app, resources={r"/*": {"origins": [frontend_url, "https://control-personal-sucesores.vercel.app"]}})
 
 # Configuración para Dropbox
 DROPBOX_TOKEN = os.getenv('DROPBOX_TOKEN')
