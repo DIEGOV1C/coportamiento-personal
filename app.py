@@ -25,11 +25,16 @@ DROPBOX_CLIENT_SECRET = os.getenv('DROPBOX_CLIENT_SECRET')
 DROPBOX_PATH = '/data.xlsx'
 REFRESH_TOKEN_FILE = 'refresh_token.json'
 
-def get_refresh_token():
+SUPABASE_URL = os.getenv('SUPABASE_URL')
+SUPABASE_KEY = os.getenv('SUPABASE_KEY')
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+def get_access_token():
+    # Intentar obtener el token de acceso actual
     if os.path.exists(REFRESH_TOKEN_FILE):
         with open(REFRESH_TOKEN_FILE, 'r') as file:
             data = json.load(file)
-            return data.get('refresh_token')
+            return data.get('access_token')
     return None
 
 def save_refresh_token(token, access_token=None):
@@ -40,7 +45,6 @@ def save_refresh_token(token, access_token=None):
         }, file)
 
 def refresh_dropbox_token():
-    global dropbox_client
     refresh_token = get_refresh_token()
     if not refresh_token:
         raise Exception('Refresh token not found')
@@ -59,18 +63,16 @@ def refresh_dropbox_token():
         tokens = response.json()
         access_token = tokens['access_token']
         save_refresh_token(refresh_token, access_token)
-        dropbox_client = dropbox.Dropbox(access_token)
+        return access_token
     except Exception as e:
         print(f'Error refreshing Dropbox token: {e}')
         raise
 
 # Inicializar el cliente de Dropbox
-dropbox_client = dropbox.Dropbox(get_refresh_token())
-
-# Configuración para la base de datos
-SUPABASE_URL = os.getenv('SUPABASE_URL')
-SUPABASE_KEY = os.getenv('SUPABASE_KEY')
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+access_token = get_access_token()
+if not access_token:
+    access_token = refresh_dropbox_token()
+dropbox_client = dropbox.Dropbox(access_token)
 
 @app.route('/')
 def index():
@@ -130,7 +132,8 @@ def submit_form():
         except dropbox.exceptions.AuthError as e:
             # Si el token está caducado, intentar refrescarlo
             if 'Invalid access token' in str(e):
-                refresh_dropbox_token()
+                access_token = refresh_dropbox_token()
+                dropbox_client = dropbox.Dropbox(access_token)
                 # Reintentar la operación
                 return submit_form()
 
