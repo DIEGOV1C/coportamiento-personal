@@ -29,6 +29,14 @@ SUPABASE_URL = os.getenv('SUPABASE_URL')
 SUPABASE_KEY = os.getenv('SUPABASE_KEY')
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
+def get_refresh_token():
+    # Intentar obtener el token de refresco actual
+    if os.path.exists(REFRESH_TOKEN_FILE):
+        with open(REFRESH_TOKEN_FILE, 'r') as file:
+            data = json.load(file)
+            return data.get('refresh_token')
+    return None
+
 def get_access_token():
     # Intentar obtener el token de acceso actual
     if os.path.exists(REFRESH_TOKEN_FILE):
