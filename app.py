@@ -7,6 +7,7 @@ import dropbox
 from dropbox.files import WriteMode
 from dropbox.exceptions import ApiError
 from supabase import create_client, Client
+import requests
 
 # Cargar las variables de entorno
 load_dotenv()
@@ -18,14 +19,37 @@ frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:8080')
 CORS(app, resources={r"/*": {"origins": [frontend_url, "https://control-personal-sucesores.vercel.app"]}})
 
 # Configuración para Dropbox
-DROPBOX_TOKEN = os.getenv('DROPBOX_TOKEN')
+DROPBOX_ACCESS_TOKEN = os.getenv('DROPBOX_ACCESS_TOKEN')
+DROPBOX_REFRESH_TOKEN = os.getenv('DROPBOX_REFRESH_TOKEN')
 DROPBOX_PATH = '/data.xlsx'
-dropbox_client = dropbox.Dropbox(DROPBOX_TOKEN)
+DROPBOX_APP_KEY = os.getenv('DROPBOX_APP_KEY')
+DROPBOX_APP_SECRET = os.getenv('DROPBOX_APP_SECRET')
+dropbox_client = dropbox.Dropbox(DROPBOX_ACCESS_TOKEN)
 
 # Configuración para la base de datos
 SUPABASE_URL = os.getenv('SUPABASE_URL')
 SUPABASE_KEY = os.getenv('SUPABASE_KEY')
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+def refresh_dropbox_token():
+    response = requests.post('https://api.dropboxapi.com/oauth2/token', data={
+        'grant_type': 'refresh_token',
+        'refresh_token': DROPBOX_REFRESH_TOKEN,
+        'client_id': DROPBOX_APP_KEY,
+        'client_secret': DROPBOX_APP_SECRET
+    })
+    response_data = response.json()
+    new_access_token = response_data.get('access_token')
+    new_refresh_token = response_data.get('refresh_token', DROPBOX_REFRESH_TOKEN)  # refresh_token might not be returned
+
+    if new_access_token:
+        # Actualiza el access token en la variable de entorno o almacenamiento seguro
+        global DROPBOX_ACCESS_TOKEN
+        DROPBOX_ACCESS_TOKEN = new_access_token
+        dropbox_client = dropbox.Dropbox(DROPBOX_ACCESS_TOKEN)
+    
+    # Retorna el nuevo refresh token si está disponible
+    return new_refresh_token
 
 @app.route('/')
 def index():
@@ -43,8 +67,15 @@ def submit_form():
         except dropbox.exceptions.ApiError as e:
             if e.error.is_path() and e.error.get_path().is_conflict():
                 return jsonify({"error": "Conflicto al descargar el archivo"}), 500
-            # Crear un DataFrame vacío si el archivo no existe
-            existing_df = pd.DataFrame()
+            elif e.user_message_text == 'Invalid access token':
+                # Token expirado, intentar refrescarlo
+                new_refresh_token = refresh_dropbox_token()
+                # Guardar el nuevo refresh token
+                # Aquí deberías guardar el nuevo refresh_token en un almacenamiento seguro, como una base de datos o archivo
+                return jsonify({"error": "Token de acceso expirado. Inténtalo de nuevo."}), 401
+            else:
+                # Crear un DataFrame vacío si el archivo no existe
+                existing_df = pd.DataFrame()
 
         # Agregar el nuevo registro
         new_record = pd.DataFrame([{
