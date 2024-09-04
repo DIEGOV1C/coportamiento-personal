@@ -14,7 +14,8 @@ load_dotenv()
 app = Flask(__name__, static_folder='static', template_folder='templates')
 frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:8080')
 
-CORS(app, resources={r"/*": {"origins": frontend_url}})
+CORS(app, resources={r"/*": {"origins": "https://control-personal-sucesores.vercel.app"}})
+
 
 # Configuración de Supabase
 SUPABASE_URL = os.getenv('SUPABASE_URL')
