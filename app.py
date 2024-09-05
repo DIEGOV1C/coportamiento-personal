@@ -14,7 +14,7 @@ load_dotenv()
 app = Flask(__name__, static_folder='static', template_folder='templates')
 frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:8080')
 
-CORS(app, resources={r"/*": {"origins": "https://control-personal-sucesores.vercel.app"}})
+CORS(app, resources={r"/*": {"origins": ["https://control-personal-sucesores.vercel.app", frontend_url]}})
 
 
 # Configuración de Supabase
@@ -143,6 +143,71 @@ def get_areas():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+    
+@app.route('/get-roles', methods=['GET'])
+def get_roles():
+    try:
+        # Consultar la base de datos y obtener roles únicos
+        response = supabase.table('personnel').select('role').execute()
+        data = response.data
+
+        # Obtener roles únicos
+        roles = list(set(person['role'] for person in data if person['role']))
+
+        return jsonify({"roles": roles}), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/add-personnel', methods=['POST'])
+def add_personnel():
+    try:
+        data = request.json
+        response = supabase.table('personnel').insert({
+            'name': data['name'],
+            'role': data['role'],
+            'id_area': data['id_area']
+        }).execute()
+
+        if response.data:
+            return jsonify({"message": "Personal agregado con éxito."}), 200
+        else:
+            return jsonify({"error": "Error al agregar personal"}), 500
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/update-personnel', methods=['PUT'])
+def update_personnel():
+    try:
+        data = request.json
+        response = supabase.table('personnel').update({
+            'name': data['name'],
+            'role': data['role'],
+            'id_area': data['id_area']
+        }).eq('id', data['id']).execute()
+
+        if response.data:
+            return jsonify({"message": "Personal actualizado con éxito."}), 200
+        else:
+            return jsonify({"error": "Error al actualizar personal"}), 500
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/delete-personnel/<id>', methods=['DELETE'])
+def delete_personnel(id):
+    try:
+        response = supabase.table('personnel').delete().eq('id', id).execute()
+
+        if response.data:
+            return jsonify({"message": "Personal eliminado con éxito."}), 200
+        else:
+            return jsonify({"error": "Error al eliminar personal"}), 500
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.getenv('PORT', 5000)), debug=os.getenv('DEBUG', 'False') == 'True')
