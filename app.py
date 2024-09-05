@@ -123,7 +123,7 @@ def download_inspection():
 @app.route('/get-personnel', methods=['GET'])
 def get_personnel():
     try:
-        # Consultar la base de datos
+        # Consultar la base de datos el personal
         response = supabase.table('personnel').select('*').execute()
         data = response.data
 
@@ -135,7 +135,7 @@ def get_personnel():
 @app.route('/get-areas', methods=['GET'])
 def get_areas():
     try:
-        # Consultar la base de datos
+        # Consultar la base de datos las areas
         response = supabase.table('area').select('*').execute()
         data = response.data
 
@@ -147,11 +147,11 @@ def get_areas():
 @app.route('/get-roles', methods=['GET'])
 def get_roles():
     try:
-        # Consultar la base de datos y obtener roles únicos
+        # Consultar la base de datos y obtener cargos
         response = supabase.table('personnel').select('role').execute()
         data = response.data
 
-        # Obtener roles únicos
+        # Obtener los cargos
         roles = list(set(person['role'] for person in data if person['role']))
 
         return jsonify({"roles": roles}), 200
