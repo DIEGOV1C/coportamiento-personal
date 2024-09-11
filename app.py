@@ -6,6 +6,7 @@ import pandas as pd
 from supabase import create_client, Client
 from io import BytesIO
 from openpyxl import Workbook
+import requests
 
 # Cargar las variables de entorno
 load_dotenv()
@@ -208,6 +209,22 @@ def delete_personnel(id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route('/api/inspection-frequency', methods=['GET'])
+def get_inspection_frequency():
+    try:
+        # Llamada a la función almacenada de Supabase
+        response = supabase.rpc('get_inspection_frequency').execute()
+
+        # Verifica si la solicitud fue exitosa
+        if not response.data:
+            return jsonify({'error': f"Error en la consulta: {response}"}), 500
+        
+        # Devuelve los datos si no hay errores
+        return jsonify(response.data), 200
+
+    except Exception as e:
+        # Maneja otros errores
+        return jsonify({'error': f"Error interno del servidor: {str(e)}"}), 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.getenv('PORT', 5000)), debug=os.getenv('DEBUG', 'False') == 'True')
